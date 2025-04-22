@@ -11,8 +11,8 @@ import { auth0 } from '@/lib/auth0';
 const robotoMono = Roboto_Mono({ weight: '400', subsets: ['latin'] });
 const publicSans = Inter({ weight: '400', subsets: ['latin'] });
 
-const TITLE = 'Auth0 Assistant0: An Auth0 + LangChain + Next.js Template';
-const DESCRIPTION = 'Starter template showing how to use Auth0 in LangChain + Next.js projects.';
+const TITLE = 'Simple Stack';
+const DESCRIPTION = 'A clean and simple stack for building AI-powered applications.';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth0.getSession();
@@ -32,27 +32,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="twitter:image" content="/images/og-image.png" />
       </head>
       <body className={publicSans.className}>
-        <div className="bg-secondary grid grid-rows-[auto,1fr] h-[100dvh]">
-          <div className="grid grid-cols-[1fr,auto] gap-2 p-4 bg-black/25">
+        <div className="grid grid-rows-[auto,1fr] h-[100dvh] bg-background">
+          <div className="grid grid-cols-[1fr,auto] gap-2 p-4 border-b">
             <div className="flex gap-4 flex-col md:flex-row md:items-center">
-              <a
-                href="https://a0.to/ai-event"
-                rel="noopener noreferrer"
-                target="_blank"
-                className="flex items-center gap-2 px-4"
-              >
-                <Image src="/images/auth0-ai-logo.svg" alt="Auth0 AI Logo" className="h-8" width={143} height={32} />
-              </a>
-              <span className={`${robotoMono.className} text-white text-2xl`}>Assistant0</span>
+              <span className={`${robotoMono.className} text-2xl`}>Simple Stack</span>
               <nav className="flex gap-1 flex-col md:flex-row">
                 <ActiveLink href="/">Chat</ActiveLink>
-                {/* <ActiveLink href="/act">Interact //TODO</ActiveLink> */}
               </nav>
             </div>
             <div className="flex justify-center">
               {session && (
                 <>
-                  <div className="flex items-center gap-2 px-4 text-white">Welcome, {session?.user?.name}!</div>
+                  <div className="flex items-center gap-2 px-4">Welcome, {session?.user?.name}!</div>
                   <Button asChild variant="destructive" size="default" className="mx-2">
                     <a href="/auth/logout" className="flex items-center gap-2">
                       <LogOut />
@@ -61,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   </Button>
                 </>
               )}
-              <Button asChild variant="header" size="default">
+              <Button asChild variant="outline" size="default">
                 <a href="https://github.com/oktadev/auth0-assistant0" target="_blank">
                   <Github className="size-3" />
                   <span>Open in GitHub</span>
@@ -69,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </Button>
             </div>
           </div>
-          <div className="gradient-up bg-gradient-to-b from-white/10 to-white/0 relative grid border-input border-b-0">
+          <div className="relative grid">
             <div className="absolute inset-0">{children}</div>
           </div>
         </div>

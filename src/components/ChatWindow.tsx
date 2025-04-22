@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom';
-import { ArrowDown, ArrowUpIcon, LoaderCircle } from 'lucide-react';
+import { ArrowDown, ArrowUpIcon, LoaderCircle, AlertCircleIcon, RefreshCcw } from 'lucide-react';
 
 import { ChatMessageBubble } from '@/components/ChatMessageBubble';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ function ChatInput(props: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   loading?: boolean;
+  disabled?: boolean;
   placeholder?: string;
   children?: ReactNode;
   className?: string;
@@ -62,6 +63,7 @@ function ChatInput(props: {
           value={props.value}
           placeholder={props.placeholder}
           onChange={props.onChange}
+          disabled={props.disabled}
           className="border-none outline-none bg-transparent p-4"
         />
 
@@ -71,13 +73,36 @@ function ChatInput(props: {
           <Button
             className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
             type="submit"
-            disabled={props.loading}
+            disabled={props.loading || props.disabled}
           >
             {props.loading ? <LoaderCircle className="animate-spin" /> : <ArrowUpIcon size={14} />}
           </Button>
         </div>
       </div>
     </form>
+  );
+}
+
+function ErrorNotification(props: { 
+  error: Error | null;
+  onRetry: () => void;
+}) {
+  if (!props.error) return null;
+  
+  return (
+    <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg p-4 mb-4 max-w-[768px] mx-auto w-full flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <AlertCircleIcon className="w-5 h-5" />
+        <div>
+          <p className="font-semibold">Error connecting to agent</p>
+          <p className="text-sm">{props.error.message || "Try logging out and back in to refresh permissions"}</p>
+        </div>
+      </div>
+      <Button variant="outline" size="sm" onClick={props.onRetry} className="gap-1">
+        <RefreshCcw className="w-3 h-3" />
+        <span>Retry</span>
+      </Button>
+    </div>
   );
 }
 
@@ -111,16 +136,30 @@ export function ChatWindow(props: {
   placeholder?: string;
   emoji?: string;
 }) {
+  const [hasError, setHasError] = useState<Error | null>(null);
+  
   const chat = useChat({
     api: props.endpoint,
     onFinish(response) {
       console.log('Final response: ', response?.content);
+      setHasError(null);
     },
     onResponse(response) {
       console.log('Response received. Status:', response.status);
+      if (!response.ok) {
+        // Handle non-200 responses
+        response.json().then((data) => {
+          setHasError(new Error(data.error || 'Unknown error occurred'));
+        }).catch(() => {
+          setHasError(new Error(`Request failed with status ${response.status}`));
+        });
+      } else {
+        setHasError(null);
+      }
     },
     onError: (e) => {
       console.error('Error: ', e);
+      setHasError(e);
       toast.error(`Error while processing your request`, { description: e.message });
     },
   });
@@ -132,7 +171,13 @@ export function ChatWindow(props: {
   async function sendMessage(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (isChatLoading()) return;
+    setHasError(null);
     chat.handleSubmit(e);
+  }
+  
+  function retryConnection() {
+    setHasError(null);
+    window.location.href = "/auth/logout?returnTo=/";
   }
 
   return (
@@ -144,11 +189,14 @@ export function ChatWindow(props: {
           chat.messages.length === 0 ? (
             <div>{props.emptyStateComponent}</div>
           ) : (
-            <ChatMessages
-              aiEmoji={props.emoji}
-              messages={chat.messages}
-              emptyStateComponent={props.emptyStateComponent}
-            />
+            <>
+              {hasError && <ErrorNotification error={hasError} onRetry={retryConnection} />}
+              <ChatMessages
+                aiEmoji={props.emoji}
+                messages={chat.messages}
+                emptyStateComponent={props.emptyStateComponent}
+              />
+            </>
           )
         }
         footer={
@@ -159,7 +207,8 @@ export function ChatWindow(props: {
               onChange={chat.handleInputChange}
               onSubmit={sendMessage}
               loading={isChatLoading()}
-              placeholder={props.placeholder ?? 'What can I help you with?'}
+              disabled={!!hasError}
+              placeholder={hasError ? 'Please retry connection before sending messages' : props.placeholder ?? 'What can I help you with?'}
             ></ChatInput>
           </div>
         }

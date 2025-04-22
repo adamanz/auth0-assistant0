@@ -1,8 +1,22 @@
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, RefreshCcw } from 'lucide-react';
 import { ChatWindow } from '@/components/ChatWindow';
 import { GuideInfoBox } from '@/components/guide/GuideInfoBox';
 import { Button } from '@/components/ui/button';
 import { auth0 } from '@/lib/auth0';
+
+// Component to help users refresh Google access
+function GoogleRefreshButton() {
+  return (
+    <div className="absolute top-4 right-4">
+      <Button asChild variant="outline" size="sm">
+        <a href="/auth/login?connection=google-oauth2&prompt=consent" className="flex items-center gap-2">
+          <RefreshCcw className="h-4 w-4"/>
+          <span>Refresh Google Access</span>
+        </a>
+      </Button>
+    </div>
+  );
+}
 
 export default async function Home() {
   const session = await auth0.getSession();
@@ -13,13 +27,13 @@ export default async function Home() {
         <h2 className="text-xl">You are not logged in</h2>
         <div className="flex gap-4">
           <Button asChild variant="default" size="default">
-            <a href="/auth/login" className="flex items-center gap-2">
+            <a href="/auth/login?connection=google-oauth2&access_type=offline&prompt=consent" className="flex items-center gap-2">
               <LogIn />
               <span>Login</span>
             </a>
           </Button>
           <Button asChild variant="default" size="default">
-            <a href="/auth/login?screen_hint=signup">
+            <a href="/auth/login?screen_hint=signup&connection=google-oauth2&access_type=offline&prompt=consent">
               <UserPlus />
               <span>Sign up</span>
             </a>
@@ -77,11 +91,14 @@ export default async function Home() {
   );
 
   return (
-    <ChatWindow
-      endpoint="api/chat"
-      emoji="🤖"
-      placeholder={`Hello ${session?.user?.name}, I'm your personal assistant. How can I help you today?`}
-      emptyStateComponent={InfoCard}
-    />
+    <>
+      {session && <GoogleRefreshButton />}
+      <ChatWindow
+        endpoint="api/chat"
+        emoji="🤖"
+        placeholder={`Hello ${session?.user?.name}, I'm your personal assistant. How can I help you today?`}
+        emptyStateComponent={InfoCard}
+      />
+    </>
   );
 }
