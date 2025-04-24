@@ -12,6 +12,13 @@ import { GoogleCalendarCreateTool, GoogleCalendarViewTool } from '@langchain/com
 import { getGoogleAccessToken } from '@/lib/auth0';
 import { convertVercelMessageToLangChainMessage } from '@/utils/message-converters';
 import { logToolCallsInDevelopment } from '@/utils/stream-logging';
+import { 
+  ListUsersAdminTool, 
+  AddUserAdminTool, 
+  SuspendUserAdminTool, 
+  UnsuspendUserAdminTool, 
+  GetUserAdminTool 
+} from '@/lib/google-admin-tools';
 
 const AGENT_SYSTEM_TEMPLATE = `You are Simple, your friendly personal assistant who keeps it simple. I'm here to help with tasks, answer questions, and make your life easier with these powerful tools at my disposal:
 
@@ -19,6 +26,12 @@ const AGENT_SYSTEM_TEMPLATE = `You are Simple, your friendly personal assistant 
 2. Web Search: I can search the internet for current information, news, or facts.
 3. Gmail: I can search your emails and create email drafts.
 4. Google Calendar: I can view your calendar and create new events.
+5. Google Admin Directory: I can manage users in your Google Workspace, including:
+   - List all users in your domain
+   - Add new users to your domain
+   - Suspend users in your domain
+   - Unsuspend users in your domain
+   - Get detailed information about specific users
 
 I'll proactively suggest using these tools when they can help with your request.
 
@@ -26,6 +39,7 @@ When I need more information to help you effectively:
 - I'll ask specific, clear questions to get the details I need
 - For calendar events, I'll ask for date, time, title, and any other missing information
 - For emails, I'll ask for recipient, subject, and content details if not provided
+- For user management, I'll ask for domain, email addresses, or user IDs as needed
 - I won't guess critical information that could lead to errors
 
 Formatting Guidelines:
@@ -102,7 +116,7 @@ export async function POST(req: NextRequest) {
           tools: basicTools,
           messageModifier: new SystemMessage(
             AGENT_SYSTEM_TEMPLATE + 
-            `\n\nNOTE: Google integrations (Gmail, Calendar) are currently unavailable. You don't have permission to access Google services.` +
+            `\n\nNOTE: Google integrations (Gmail, Calendar, Admin) are currently unavailable. You don't have permission to access Google services.` +
             `\n\nTo fix this issue: Please sign out, then sign back in and make sure to allow all requested permissions.`
           ),
         });
@@ -124,6 +138,10 @@ export async function POST(req: NextRequest) {
         model: llm,
       };
 
+      const googleAdminParams = {
+        credentials: { accessToken },
+      };
+
       // Create all tools including Google integrations
       const tools = [
         ...basicTools,
@@ -131,6 +149,11 @@ export async function POST(req: NextRequest) {
         new GmailCreateDraft(gmailParams),
         new GoogleCalendarCreateTool(googleCalendarParams),
         new GoogleCalendarViewTool(googleCalendarParams),
+        new ListUsersAdminTool(googleAdminParams),
+        new AddUserAdminTool(googleAdminParams),
+        new SuspendUserAdminTool(googleAdminParams),
+        new UnsuspendUserAdminTool(googleAdminParams),
+        new GetUserAdminTool(googleAdminParams),
       ];
       
       console.log('Successfully created Google tools, creating agent');
@@ -180,7 +203,7 @@ export async function POST(req: NextRequest) {
         tools: basicTools,
         messageModifier: new SystemMessage(
           AGENT_SYSTEM_TEMPLATE + 
-          `\n\nNOTE: Google integrations (Gmail, Calendar) are currently unavailable: ${errorContext}. Please try logging out and back in with Google to fix this issue.`
+          `\n\nNOTE: Google integrations (Gmail, Calendar, Admin) are currently unavailable: ${errorContext}. Please try logging out and back in with Google to fix this issue.`
         ),
       });
       
